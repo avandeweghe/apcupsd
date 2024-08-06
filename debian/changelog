@@ -1,3 +1,9 @@
+apcupsd (3.14.14-5) unstable; urgency=medium
+
+  * upload to unstable again
+
+ -- Thorsten Alteholz <debian@alteholz.de>  Tue, 06 Aug 2024 22:14:07 +0200
+
 apcupsd (3.14.14-4) experimental; urgency=medium
 
   * upload to experimental
