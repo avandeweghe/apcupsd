@@ -1,0 +1,13 @@
+Index: apcupsd/configure
+===================================================================
+--- apcupsd.orig/configure	2025-05-16 14:45:06.285777190 +0200
++++ apcupsd/configure	2025-05-16 14:46:45.125832018 +0200
+@@ -14695,7 +14695,7 @@
+ 
+ echo "
+ 
+-Configuration on `date`:
++Configuration:
+ 
+   Host:                       $host -- ${DISTNAME} ${DISTVER}
+   Apcupsd version:            ${VERSION} (${DATE})

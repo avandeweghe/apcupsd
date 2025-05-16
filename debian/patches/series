@@ -10,3 +10,4 @@
 14-update-conf.patch
 15-gapcmon.patch
 16-update-scripts.patch
+17-reproducible-build.patch

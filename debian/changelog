@@ -1,3 +1,11 @@
+apcupsd (3.14.14-6) unstable; urgency=medium
+
+  * DO NOT RELEASE YET
+  * debian/control: add Multi-Arch: foreign for doc package
+  * add debian/patches/17-reproducible-build.patch
+
+ -- Thorsten Alteholz <debian@alteholz.de>  Fri, 16 Mar 2025 09:14:07 +0200
+
 apcupsd (3.14.14-5) unstable; urgency=medium
 
   * upload to unstable again

@@ -62,6 +62,7 @@ Description: APC UPS Power Management (web interface)
 Package: apcupsd-doc
 Section: doc
 Architecture: all
+Multi-Arch: foreign
 Depends: ${misc:Depends}
 Replaces: apcupsd
 Description: APC UPS Power Management (documentation/examples)
