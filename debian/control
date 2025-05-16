@@ -30,7 +30,7 @@ Architecture: any
 Depends: ${misc:Depends}
 	, ${shlibs:Depends}
 	, lsb-base
-Conflicts: ups-monitor
+Conflicts: ups-monitor, nut-client
 Provides: ups-monitor
 Recommends: apcupsd-doc,
             s-nail | mailx
