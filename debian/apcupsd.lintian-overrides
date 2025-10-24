@@ -4,3 +4,4 @@ apcupsd: init.d-script-does-not-implement-required-option restart [etc/init.d/up
 apcupsd: init.d-script-does-not-implement-required-option start [etc/init.d/ups-monitor]
 apcupsd: init.d-script-does-not-implement-required-option stop [etc/init.d/ups-monitor]
 apcupsd: init-script-is-not-a-file [etc/init.d/ups-monitor]
+apcupsd: depends-on-obsolete-package Depends: lsb-base

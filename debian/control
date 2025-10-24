@@ -2,10 +2,11 @@ Source: apcupsd
 Section: admin
 Priority: optional
 Maintainer: Thorsten Alteholz <debian@alteholz.de>
+# 11 is needed due to dh_installinit
 Build-Depends: debhelper-compat (= 11)
 	, libgd-dev
 	, libmodbus-dev
-	, libncurses5-dev | libncurses-dev
+	, libncurses-dev
 	, libsnmp-dev
 	, libusb-dev
 	, libwrap0-dev
@@ -16,10 +17,11 @@ Build-Depends: debhelper-compat (= 11)
 	, systemd-dev
 	, tcpd
 	, texinfo
+        , bsdutils
 # gconf shall disappear:	, libgtk2.0-dev
 # gconf shall disappear:	, libgconf2-dev
 # will disappear:	, rst2pdf
-Standards-Version: 4.7.0
+Standards-Version: 4.7.2
 Homepage: http://www.apcupsd.org/
 Vcs-Browser: https://salsa.debian.org/alteholz/apcupsd
 Vcs-Git: https://salsa.debian.org/alteholz/apcupsd.git

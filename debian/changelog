@@ -1,12 +1,15 @@
 apcupsd (3.14.14-6) unstable; urgency=medium
 
-  * DO NOT RELEASE YET
   * debian/control: add Multi-Arch: foreign for doc package
+  * debian/control: add dependency to bsdutils (needed for wall)
+                    (Closes: #1118316)
   * debian/control: conflict with nut-client due to identical files
      /etc/init.d/ups-monitor, /usr/lib/systemd/system/ups-monitor.service
+  * debian/control: bump standard to 4.7.2 (no changes)
+  * debian/control: remove dependency to obsolete package libncurses5-dev
   * add debian/patches/17-reproducible-build.patch
 
- -- Thorsten Alteholz <debian@alteholz.de>  Fri, 16 Mar 2025 09:14:07 +0200
+ -- Thorsten Alteholz <debian@alteholz.de>  Fri, 24 Oct 2025 18:14:07 +0200
 
 apcupsd (3.14.14-5) unstable; urgency=medium
 
