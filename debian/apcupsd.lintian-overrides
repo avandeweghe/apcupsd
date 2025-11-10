@@ -5,3 +5,5 @@ apcupsd: init.d-script-does-not-implement-required-option start [etc/init.d/ups-
 apcupsd: init.d-script-does-not-implement-required-option stop [etc/init.d/ups-monitor]
 apcupsd: init-script-is-not-a-file [etc/init.d/ups-monitor]
 apcupsd: depends-on-obsolete-package Depends: lsb-base
+# this is wrong  -> #1118442
+apcupsd: depends-on-essential-package-without-using-version

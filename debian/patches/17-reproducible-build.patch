@@ -1,3 +1,4 @@
+Description: this should make the package build reproducible
 Index: apcupsd/configure
 ===================================================================
 --- apcupsd.orig/configure	2025-05-16 14:45:06.285777190 +0200

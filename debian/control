@@ -32,6 +32,7 @@ Architecture: any
 Depends: ${misc:Depends}
 	, ${shlibs:Depends}
 	, lsb-base
+        , bsdutils
 Conflicts: ups-monitor, nut-client
 Provides: ups-monitor
 Recommends: apcupsd-doc,

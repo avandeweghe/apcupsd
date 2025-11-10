@@ -1,3 +1,10 @@
+apcupsd (3.14.14-7) unstable; urgency=medium
+
+  * debian/control: add bsdutils as runtime dependency as well
+                    (Closes: #1119127)
+
+ -- Thorsten Alteholz <debian@alteholz.de>  Mon, 10 Nov 2025 11:14:07 +0100
+
 apcupsd (3.14.14-6) unstable; urgency=medium
 
   * debian/control: add Multi-Arch: foreign for doc package
