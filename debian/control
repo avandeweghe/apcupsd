@@ -1,7 +1,7 @@
 Source: apcupsd
 Section: admin
 Priority: optional
-Maintainer: Thorsten Alteholz <debian@alteholz.de>
+Maintainer: Debian QA Group <packages@qa.debian.org>
 # 11 is needed due to dh_installinit
 Build-Depends: debhelper-compat (= 11)
 	, libgd-dev
@@ -23,8 +23,8 @@ Build-Depends: debhelper-compat (= 11)
 # will disappear:	, rst2pdf
 Standards-Version: 4.7.2
 Homepage: http://www.apcupsd.org/
-Vcs-Browser: https://salsa.debian.org/alteholz/apcupsd
-Vcs-Git: https://salsa.debian.org/alteholz/apcupsd.git
+Vcs-Browser: https://salsa.debian.org/debian/apcupsd
+Vcs-Git: https://salsa.debian.org/debian/apcupsd.git
 Rules-Requires-Root: no
 
 Package: apcupsd
