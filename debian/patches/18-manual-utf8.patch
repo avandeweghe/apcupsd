@@ -1,0 +1,20 @@
+Description: convert maintaining_ups.rst from Latin-1 to UTF-8
+ Newer docutils (Debian 13) refuses non-UTF-8 input, so building the
+ manual failed on the Latin-1 "±" in this file.
+Author: avandeweghe <1706945+avandeweghe@users.noreply.github.com>
+Forwarded: no
+Last-Update: 2026-11-17
+---
+diff --git a/doc/manual/maintaining_ups.rst b/doc/manual/maintaining_ups.rst
+index ed4ff0a..ad4d7f5 100644
+--- a/doc/manual/maintaining_ups.rst
++++ b/doc/manual/maintaining_ups.rst
+@@ -307,7 +307,7 @@ For a Matrix UPS:
+     1. Battery capacity must be 100% at start of calibration (all packs must indicated as float).
+     2. Initial "Estimated Run Time" must not exceed 128 minutes (remove battery packs if necessary).
+     3. Load must be above 25%.
+-    4. Load must not fluctuate more than � 5%.
++    4. Load must not fluctuate more than ± 5%.
+     5. The UPS must be allowed to run down to 25% battery capacity. PowerChute [or apcupsd] and Accessories must be removed since they can abort the calibration prematurely.
+ 
+ For a "dumb" or "simple signalling" UPS (eg a Back-UPS):

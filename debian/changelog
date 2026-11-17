@@ -5,6 +5,8 @@ apcupsd (3.14.14-5+pcnetgroup1) trixie; urgency=medium
     ipaddr:username:passphrase[:port[:group]]. With a group set, the card
     starting that group's shutdown sequence triggers a remote shutdown,
     the same as a whole-UPS shutdown (SD=1). (17-pcnet-outlet-group-shutdown.patch)
+  * Convert doc/manual/maintaining_ups.rst to UTF-8 so the manual builds
+    with current docutils. (18-manual-utf8.patch)
 
  -- avandeweghe <1706945+avandeweghe@users.noreply.github.com>  Tue, 17 Nov 2026 18:00:00 -0500
 
