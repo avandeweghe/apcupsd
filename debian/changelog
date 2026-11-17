@@ -1,3 +1,12 @@
+apcupsd (3.14.14-5+pcnetgroup2) trixie; urgency=medium
+
+  * apcaccess: when a pcnet outlet group is configured, show OUTLGRP,
+    OUTLNAME and OUTLSTAT (ON / SHUTTING DOWN / OFF / UNKNOWN).
+  * Show "+pcnetgroup2" in the VERSION string and startup log.
+    (19-apcaccess-outlet-group.patch)
+
+ -- avandeweghe <1706945+avandeweghe@users.noreply.github.com>  Tue, 17 Nov 2026 18:30:00 -0500
+
 apcupsd (3.14.14-5+pcnetgroup1) trixie; urgency=medium
 
   * pcnet: honour per-outlet-group shutdown (SDn) from the management card.

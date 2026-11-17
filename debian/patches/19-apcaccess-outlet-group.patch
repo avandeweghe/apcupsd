@@ -1,0 +1,123 @@
+Description: apcaccess: show the followed outlet group; mark the patched build
+ When the pcnet DEVICE has an outlet group (ipaddr:user:pass[:port[:group]]),
+ report it in the status output (apcaccess / NIS):
+   OUTLGRP  : group number
+   OUTLNAME : group name reported by the card (SNn)
+   OUTLSTAT : ON, SHUTTING DOWN, OFF or UNKNOWN (from SGn and SDn)
+ Nothing changes when no group is configured.
+ .
+ Also append "+pcnetgroup2" to the release string shown in VERSION and in
+ the startup log, so the patched build is easy to tell apart from stock.
+Author: avandeweghe <1706945+avandeweghe@users.noreply.github.com>
+Forwarded: no
+Last-Update: 2026-11-17
+---
+diff --git a/include/struct.h b/include/struct.h
+index ba80ea7..1d6a220 100644
+--- a/include/struct.h
++++ b/include/struct.h
+@@ -317,6 +317,12 @@ class UPSINFO {
+    char beepstate[8];              /* when to beep on power failure. */
+    char eprom[500];                /* Eprom values */
+ 
++   /* Outlet group this host follows (pcnet DEVICE ...:group); 0 = none */
++   int outlet_group;
++   char outlet_name[32];           /* group name reported by the card (SNn) */
++   int outlet_state;               /* SGn: 1 = on, 0 = off, -1 = unknown */
++   bool outlet_shutdown;           /* SDn: group shutdown in progress */
++
+    /* Items specified from config file */
+    int annoy;
+    int maxtime;
+diff --git a/include/version.h b/include/version.h
+index b2ff12b..c7b3ff8 100644
+--- a/include/version.h
++++ b/include/version.h
+@@ -2,7 +2,7 @@
+ #define VERSION "3.14.14"
+ #define ADATE   "31 May 2016"
+ 
+-#define APCUPSD_RELEASE VERSION
++#define APCUPSD_RELEASE VERSION "+pcnetgroup2"
+ 
+ #ifndef APCUPSD_HOST
+ # define APCUPSD_HOST HOST
+diff --git a/src/drivers/pcnet/pcnet.c b/src/drivers/pcnet/pcnet.c
+index a8274f5..1ea4d78 100644
+--- a/src/drivers/pcnet/pcnet.c
++++ b/src/drivers/pcnet/pcnet.c
+@@ -163,13 +163,26 @@ bool PcnetUpsDriver::pcnet_process_data(const char *key, const char *value)
+     * example, load shedding after N seconds on battery). Only act on the
+     * group configured in DEVICE; ignore the others.
+     */
+-   if (key[0] == 'S' && key[1] == 'D' && isdigit((unsigned char)key[2]))
++   if (key[0] == 'S' && (key[1] == 'D' || key[1] == 'G' || key[1] == 'N')
++       && isdigit((unsigned char)key[2]))
+    {
+       char *end;
+       long grp = strtol(key + 2, &end, 10);
+       if (*end != '\0' || _group == 0 || grp != _group)
+          return true;
+ 
++      /* SNn: group name, for display in apcaccess */
++      if (key[1] == 'N') {
++         strlcpy(_ups->outlet_name, value, sizeof(_ups->outlet_name));
++         return true;
++      }
++
++      /* SGn: group outlets on (1) or off (0) */
++      if (key[1] == 'G') {
++         _ups->outlet_state = strtoul(value, NULL, 10) ? 1 : 0;
++         return true;
++      }
++
+       cmd = strtoul(value, NULL, 10);
+       switch (cmd)
+       {
+@@ -191,6 +204,7 @@ bool PcnetUpsDriver::pcnet_process_data(const char *key, const char *value)
+          break;
+       }
+ 
++      _ups->outlet_shutdown = _shutGroup;
+       update_shut_remote();
+       return true;
+    }
+@@ -717,6 +731,9 @@ bool PcnetUpsDriver::Open()
+       if (_group)
+          Dmsg(50, "pcnet: following outlet group %d shutdown (SD%d)\n",
+             _group, _group);
++
++      _ups->outlet_group = _group;
++      _ups->outlet_state = -1;
+    }
+ 
+    _fd = socket_cloexec(PF_INET, SOCK_DGRAM, 0);
+diff --git a/src/lib/apcstatus.c b/src/lib/apcstatus.c
+index 68cb6c4..8205991 100644
+--- a/src/lib/apcstatus.c
++++ b/src/lib/apcstatus.c
+@@ -133,6 +133,24 @@ int output_status(UPSINFO *ups, int sockfd,
+ 
+    s_write(ups, "STATUS   : %s\n", status);
+ 
++   /* Outlet group this host follows (pcnet DEVICE ...:group) */
++   if (ups->outlet_group > 0) {
++      const char *gstat;
++      if (ups->outlet_state == 0)
++         gstat = "OFF";
++      else if (ups->outlet_shutdown)
++         gstat = "SHUTTING DOWN";
++      else if (ups->outlet_state == 1)
++         gstat = "ON";
++      else
++         gstat = "UNKNOWN";
++
++      s_write(ups, "OUTLGRP  : %d\n", ups->outlet_group);
++      if (ups->outlet_name[0])
++         s_write(ups, "OUTLNAME : %s\n", ups->outlet_name);
++      s_write(ups, "OUTLSTAT : %s\n", gstat);
++   }
++
+    if (ups->UPS_Cap[CI_VLINE])
+       s_write(ups, "LINEV    : %.1f Volts\n", ups->LineVoltage);
+ 
