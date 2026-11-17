@@ -1,0 +1,201 @@
+Description: pcnet: honour per-outlet-group shutdown (SDn) from the management card
+ Network management cards on UPSes with switched outlet groups map each
+ PowerChute client to an outlet group. When a group's shutdown sequence
+ starts (e.g. load shedding after N seconds on battery) the card sets
+ SDn=1 for that group in its status broadcast. apcupsd only looked at the
+ whole-UPS SD flag, so it never shut down for a group-only shutdown.
+ .
+ DEVICE now accepts an optional group number after the port:
+   ipaddr:username:passphrase[:port[:group]]
+ With a group set, SD<group>=1 triggers the same remote shutdown as SD=1.
+ SD and SDn are combined so key order in the packet does not matter.
+ Existing configs without a group behave exactly as before.
+Author: avandeweghe <1706945+avandeweghe@users.noreply.github.com>
+Forwarded: no
+Last-Update: 2026-11-17
+---
+diff --git a/platforms/etc/apcupsd.conf.in b/platforms/etc/apcupsd.conf.in
+index f6bfa25..ab90a49 100644
+--- a/platforms/etc/apcupsd.conf.in
++++ b/platforms/etc/apcupsd.conf.in
+@@ -70,7 +70,7 @@ UPSCABLE @UPSCABLE@
+ # dumb      /dev/tty**       Old serial character device for use with 
+ #                            simple-signaling UPSes.
+ #
+-# pcnet     ipaddr:username:passphrase:port
++# pcnet     ipaddr:username:passphrase:port:group
+ #                            PowerChute Network Shutdown protocol which can be 
+ #                            used as an alternative to SNMP with the AP9617 
+ #                            family of smart slot cards. ipaddr is the IP 
+@@ -80,6 +80,12 @@ UPSCABLE @UPSCABLE@
+ #                            which to listen for messages from the UPS, normally 
+ #                            3052. If this parameter is empty or missing, the 
+ #                            default of 3052 will be used.
++#                            group is optional: on UPSes with switched outlet
++#                            groups, set it to the outlet group this machine
++#                            is powered from (e.g. 3) and apcupsd will shut
++#                            down when the card starts that group's shutdown
++#                            sequence (SDn), not only when the whole UPS shuts
++#                            down. Example: 10.0.0.5:apc:phrase::3
+ #
+ # modbus    /dev/tty**       Serial device for use with newest SmartUPS models
+ #                            supporting the MODBUS protocol.
+diff --git a/src/drivers/pcnet/pcnet.c b/src/drivers/pcnet/pcnet.c
+index d08e5b8..a8274f5 100644
+--- a/src/drivers/pcnet/pcnet.c
++++ b/src/drivers/pcnet/pcnet.c
+@@ -99,11 +99,27 @@ PcnetUpsDriver::PcnetUpsDriver(UPSINFO *ups) :
+    _reboots(0),
+    _datatime(0),
+    _runtimeInSeconds(false),
+-   _fd(INVALID_SOCKET)
++   _fd(INVALID_SOCKET),
++   _group(0),
++   _shutUps(false),
++   _shutGroup(false)
+ {
+    memset(_device, 0, sizeof(_device));
+ }
+ 
++/*
++ * The card reports whole-UPS shutdown (SD) and per-outlet-group shutdown
++ * (SDn) as separate keys in the same packet. Combine them so the order
++ * the keys arrive in does not matter: shut down if either is set.
++ */
++void PcnetUpsDriver::update_shut_remote()
++{
++   if (_shutUps || _shutGroup)
++      _ups->set_shut_remote();
++   else
++      _ups->clear_shut_remote();
++}
++
+ bool PcnetUpsDriver::pcnet_process_data(const char *key, const char *value)
+ {
+    unsigned long cmd;
+@@ -115,7 +131,7 @@ bool PcnetUpsDriver::pcnet_process_data(const char *key, const char *value)
+    if (*value == '\0')
+       return false;
+ 
+-   /* Detect remote shutdown command */
++   /* Detect remote shutdown command for the whole UPS */
+    if (strcmp(key, "SD") == 0)
+    {
+       cmd = strtoul(value, NULL, 10);
+@@ -123,19 +139,59 @@ bool PcnetUpsDriver::pcnet_process_data(const char *key, const char *value)
+       {
+       case 0:
+          Dmsg(80, "SD: The UPS is NOT shutting down\n");
+-         _ups->clear_shut_remote();
++         _shutUps = false;
+          break;
+ 
+       case 1:
+          Dmsg(80, "SD: The UPS is shutting down\n");
+-         _ups->set_shut_remote();
++         _shutUps = true;
+          break;
+ 
+       default:
+          Dmsg(80, "Unrecognized SD value %s!\n", value);
+          break;
+       }
+- 
++
++      update_shut_remote();
++      return true;
++   }
++
++   /*
++    * Detect remote shutdown command for an outlet group (SD1, SD2, ...).
++    * Cards with switched outlet groups map each PowerChute client to a
++    * group and set SDn=1 when that group's shutdown sequence starts (for
++    * example, load shedding after N seconds on battery). Only act on the
++    * group configured in DEVICE; ignore the others.
++    */
++   if (key[0] == 'S' && key[1] == 'D' && isdigit((unsigned char)key[2]))
++   {
++      char *end;
++      long grp = strtol(key + 2, &end, 10);
++      if (*end != '\0' || _group == 0 || grp != _group)
++         return true;
++
++      cmd = strtoul(value, NULL, 10);
++      switch (cmd)
++      {
++      case 0:
++         Dmsg(80, "SD%d: Outlet group %d is NOT shutting down\n", _group, _group);
++         _shutGroup = false;
++         break;
++
++      case 1:
++         Dmsg(80, "SD%d: Outlet group %d is shutting down\n", _group, _group);
++         if (!_shutGroup)
++            log_event(_ups, LOG_WARNING,
++               "Management card started shutdown of outlet group %d", _group);
++         _shutGroup = true;
++         break;
++
++      default:
++         Dmsg(80, "Unrecognized SD%d value %s!\n", _group, value);
++         break;
++      }
++
++      update_shut_remote();
+       return true;
+    }
+ 
+@@ -637,15 +693,30 @@ bool PcnetUpsDriver::Open()
+       if (*ptr == '\0')
+          Error_abort("Malformed DEVICE [ip:user:pass]\n");
+ 
+-      // Last segment is optional port number
++      // Optional port number, then optional outlet group number:
++      // ip:user:pass[:port[:group]]  (port may be empty for the default)
+       ptr = strchr(ptr, ':');
+       if (ptr)
+       {
+          *ptr++ = '\0';
++
++         char *grp = strchr(ptr, ':');
++         if (grp)
++         {
++            *grp++ = '\0';
++            _group = atoi(grp);
++            if (_group < 0)
++               _group = 0;
++         }
++
+          port = atoi(ptr);
+          if (port == 0)
+             port = PCNET_DEFAULT_PORT;
+       }
++
++      if (_group)
++         Dmsg(50, "pcnet: following outlet group %d shutdown (SD%d)\n",
++            _group, _group);
+    }
+ 
+    _fd = socket_cloexec(PF_INET, SOCK_DGRAM, 0);
+diff --git a/src/drivers/pcnet/pcnet.h b/src/drivers/pcnet/pcnet.h
+index 00b0130..57eba47 100644
+--- a/src/drivers/pcnet/pcnet.h
++++ b/src/drivers/pcnet/pcnet.h
+@@ -32,6 +32,7 @@ private:
+    bool pcnet_process_data(const char *key, const char *value);
+    struct pair *auth_and_map_packet(char *buf, int len);
+    int wait_for_data(int wait_time);
++   void update_shut_remote();
+ 
+    static SelfTestResult decode_testresult(const char* str);
+    static LastXferCause decode_lastxfer(const char *str);
+@@ -48,6 +49,9 @@ private:
+    time_t _datatime;                    /* Last time we got valid data */
+    bool _runtimeInSeconds;              /* UPS reports runtime in seconds */
+    sock_t _fd;                          /* Socket connection */
++   int _group;                          /* Outlet group to follow (0 = none) */
++   bool _shutUps;                       /* Card says whole UPS shutting down (SD) */
++   bool _shutGroup;                     /* Card says our outlet group shutting down (SDn) */
+ };
+ 
+ #endif   /* _PCNET_H */

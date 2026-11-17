@@ -1,0 +1,43 @@
+name: Build Debian package
+
+on:
+  push:
+    branches: [pcnet-outlet-group]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    steps:
+      - name: Install tooling
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git ca-certificates build-essential devscripts equivs binutils
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install build dependencies
+        run: mk-build-deps -i -r -t "apt-get -y --no-install-recommends" debian/control
+
+      - name: Build binary packages
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git archive --prefix=apcupsd-3.14.14/ upstream/3.14.14 | gzip -n > ../apcupsd_3.14.14.orig.tar.gz
+          dpkg-buildpackage -b -us -uc
+          mkdir -p out
+          cp ../*.deb out/
+          ls -l out
+
+      - name: Check the patch is in the built driver
+        run: |
+          dpkg-deb -x out/apcupsd_*_amd64.deb /tmp/pkg
+          strings /tmp/pkg/usr/sbin/apcupsd | grep -F "Management card started shutdown of outlet group"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apcupsd-debs
+          path: out/*.deb
