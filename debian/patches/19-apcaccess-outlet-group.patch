@@ -6,7 +6,7 @@ Description: apcaccess: show the followed outlet group; mark the patched build
    OUTLSTAT : ON, SHUTTING DOWN, OFF or UNKNOWN (from SGn and SDn)
  Nothing changes when no group is configured.
  .
- Also append "+pcnetgroup2" to the release string shown in VERSION and in
+ Also append "+pcnetgroup2" (PCNETGROUP_SUFFIX) to the release string shown in VERSION and in
  the startup log, so the patched build is easy to tell apart from stock.
 Author: avandeweghe <1706945+avandeweghe@users.noreply.github.com>
 Forwarded: no
@@ -33,12 +33,13 @@ diff --git a/include/version.h b/include/version.h
 index b2ff12b..c7b3ff8 100644
 --- a/include/version.h
 +++ b/include/version.h
-@@ -2,7 +2,7 @@
+@@ -2,7 +2,8 @@
  #define VERSION "3.14.14"
  #define ADATE   "31 May 2016"
  
 -#define APCUPSD_RELEASE VERSION
-+#define APCUPSD_RELEASE VERSION "+pcnetgroup2"
++#define PCNETGROUP_SUFFIX "+pcnetgroup2"
++#define APCUPSD_RELEASE VERSION PCNETGROUP_SUFFIX
  
  #ifndef APCUPSD_HOST
  # define APCUPSD_HOST HOST
