@@ -93,8 +93,7 @@ After apcupsd shuts a machine down, Debian's shutdown hooks run
 **whole UPS**, which turns off every outlet group, not just the one the
 machine is on.
 
-On a UPS shared by several machines, disable that until group-aware killpower
-lands. Edit the `killpower)` case in `/etc/apcupsd/apccontrol` (a conffile, so
+On a UPS shared by several machines, disable it. Edit the `killpower)` case in `/etc/apcupsd/apccontrol` (a conffile, so
 package upgrades keep your change) to only log, for example:
 
 ```sh
@@ -103,11 +102,17 @@ package upgrades keep your change) to only log, for example:
     ;;
 ```
 
-The card's own load shedding still turns the group off after its Power Off
-Delay, so a group-following host doesn't need killpower in normal use.
+Killpower isn't needed with pcnet: the card's own load shedding turns each
+group off after its Power Off Delay and back on when power returns.
 
-**Planned (patch 20):** in group mode, killpower turns off only the configured
-outlet group (SNMP outlet-group "delayed off"), and never the whole UPS.
+Tested on an AP9630 (firmware 6.4.0): pcnet's killpower always starts a
+**whole-UPS** graceful shutdown, even when the sending host is registered on a
+specific outlet group in the card's PowerChute client list. The card log shows
+all switched groups "commanded to turn off, sequenced", initiated by the
+client's IP. The pcnet protocol has no group-scoped power-off. If you ever
+need one, the documented route is SNMP: set `upsOutletGroupControlCommand`
+(`.1.3.6.1.4.1.318.1.1.1.12.3.2.1.3.<group>`) to
+`upsOutletGroupDelayedRebootShutdown` (10).
 
 ## Card settings that go with this
 
