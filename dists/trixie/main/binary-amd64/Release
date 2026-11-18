@@ -1,0 +1,5 @@
+Component: main
+Origin: apcupsd-pcnet
+Label: apcupsd-pcnet
+Architecture: amd64
+Description: apcupsd with pcnet outlet-group support (github.com/avandeweghe/apcupsd)

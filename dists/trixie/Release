@@ -1,0 +1,19 @@
+Origin: apcupsd-pcnet
+Label: apcupsd-pcnet
+Codename: trixie
+Date: Wed, 18 Nov 2026 01:40:29 UTC
+Architectures: amd64
+Components: main
+Description: apcupsd with pcnet outlet-group support (github.com/avandeweghe/apcupsd)
+MD5Sum:
+ 0e93ed4a124d54f2a025187ab8a0061c 2713 main/binary-amd64/Packages
+ 7442ca2d3d19be75800db2b4615fc01c 1077 main/binary-amd64/Packages.gz
+ d919da57d439173e0d639fc8217f8078 165 main/binary-amd64/Release
+SHA1:
+ a907129d6615a2bfbd035c461849211ce277cc3e 2713 main/binary-amd64/Packages
+ 22501e2b113c2af079db58be81e93859f6b51ae4 1077 main/binary-amd64/Packages.gz
+ b5a0aef7fad4a7d3b6fc3ef10b31239313388ece 165 main/binary-amd64/Release
+SHA256:
+ 2b8216135d48d0f8a893bae2221b17de21551c170addca758db9533ac8cec319 2713 main/binary-amd64/Packages
+ eeb5abb7617baf7227f06abd5a36f0c520c24e5e95ded52a0e376c13121e100e 1077 main/binary-amd64/Packages.gz
+ 2171b0a7710abb0d816b701e8586868da7d80b8154de4281887f431375e3223f 165 main/binary-amd64/Release

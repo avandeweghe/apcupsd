@@ -1,0 +1,72 @@
+Package: apcupsd
+Version: 3.14.14-5+pcnetgroup3
+Architecture: amd64
+Maintainer: Thorsten Alteholz <debian@alteholz.de>
+Installed-Size: 909
+Depends: libc6 (>= 2.38), libgcc-s1 (>= 4.2), libusb-0.1-4 (>= 2:0.1.12), libwrap0 (>= 7.6-4~), lsb-base
+Recommends: apcupsd-doc, s-nail | mailx
+Suggests: apcupsd-cgi, udev
+Conflicts: ups-monitor
+Provides: ups-monitor
+Homepage: http://www.apcupsd.org/
+Priority: optional
+Section: admin
+Filename: pool/main/a/apcupsd/apcupsd_3.14.14-5+pcnetgroup3_amd64.deb
+Size: 261504
+SHA256: eefe4891f71f3a97268e1fc593772c29da7348c5798f89b8230d110136f5f50d
+SHA1: 38d7f667d519fbdcf44e21babea7c43715087454
+MD5sum: dceb2f36b492c3f2fe7f9160950ec32d
+Description: APC UPS Power Management (daemon)
+ apcupsd provides UPS power management for APC products, including most BackUPS
+ series models (including USB), SmartUPS V/S, SmartUPS (NET/RM), and Matrix
+ series.
+ .
+ It controls and monitors the status of UPS and allows your computer to run for
+ a specified length of time on UPS power, and then executes a controlled
+ shutdown in the case of an extended power failure.
+
+Package: apcupsd-cgi
+Source: apcupsd
+Version: 3.14.14-5+pcnetgroup3
+Architecture: amd64
+Maintainer: Thorsten Alteholz <debian@alteholz.de>
+Installed-Size: 222
+Depends: apcupsd (= 3.14.14-5+pcnetgroup3), libc6 (>= 2.38), libgd3 (>= 2.1.0~alpha~)
+Suggests: apache2 | httpd
+Homepage: http://www.apcupsd.org/
+Priority: optional
+Section: web
+Filename: pool/main/a/apcupsd/apcupsd-cgi_3.14.14-5+pcnetgroup3_amd64.deb
+Size: 86116
+SHA256: b8849a7935ecc928371fefa3efe5b1e75e99b61bfffe44310585a19ff73db914
+SHA1: 8cd8372fad97e7bbbb178cd0628729743e990cb0
+MD5sum: 3476f9dddad9d09af853f908d26e2c88
+Description: APC UPS Power Management (web interface)
+ apcupsd provides UPS power management for APC products, including most BackUPS
+ series models (including USB), SmartUPS V/S, SmartUPS (NET/RM), and Matrix
+ series.
+ .
+ This package contains the web interface.
+
+Package: apcupsd-doc
+Source: apcupsd
+Version: 3.14.14-5+pcnetgroup3
+Architecture: all
+Maintainer: Thorsten Alteholz <debian@alteholz.de>
+Installed-Size: 798
+Replaces: apcupsd
+Homepage: http://www.apcupsd.org/
+Priority: optional
+Section: doc
+Filename: pool/main/a/apcupsd/apcupsd-doc_3.14.14-5+pcnetgroup3_all.deb
+Size: 382344
+SHA256: 7d4d9e59b51826c291894163690dc19e58ea151c7c78a1c1aca59b22d9f5e05f
+SHA1: 96a3036f3e8b72c6bb302260826949334a058d37
+MD5sum: 099e34cc3d4ac2e897dbc440c2f9438b
+Description: APC UPS Power Management (documentation/examples)
+ apcupsd provides UPS power management for APC products, including most BackUPS
+ series models (including USB), SmartUPS V/S, SmartUPS (NET/RM), and Matrix
+ series.
+ .
+ This package contains the documentation and examples.
+
