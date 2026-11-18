@@ -80,7 +80,7 @@ jobs:
           Origin: apcupsd-pcnet
           Label: apcupsd-pcnet
           Codename: trixie
-          Architectures: amd64 all
+          Architectures: amd64
           Components: main
           Description: apcupsd with pcnet outlet-group support (github.com/${GITHUB_REPOSITORY})
           SignWith: ${SIGNING_KEY_ID}
