@@ -13,3 +13,4 @@
 17-pcnet-outlet-group-shutdown.patch
 18-manual-utf8.patch
 19-apcaccess-outlet-group.patch
+20-pcnet-group-skip-killpower.patch

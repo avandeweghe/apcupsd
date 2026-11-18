@@ -1,3 +1,11 @@
+apcupsd (3.14.14-5+pcnetgroup3) trixie; urgency=medium
+
+  * pcnet: when following an outlet group, killpower is skipped and logged
+    instead of shutting down the whole UPS; the card's load shedding powers
+    the group off and on. (20-pcnet-group-skip-killpower.patch)
+
+ -- avandeweghe <1706945+avandeweghe@users.noreply.github.com>  Tue, 17 Nov 2026 20:00:00 -0500
+
 apcupsd (3.14.14-5+pcnetgroup2) trixie; urgency=medium
 
   * apcaccess: when a pcnet outlet group is configured, show OUTLGRP,

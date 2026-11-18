@@ -1,0 +1,51 @@
+Description: pcnet: never send whole-UPS killpower when following an outlet group
+ pcnet's killpower makes the management card start a graceful shutdown of
+ the whole UPS (all outlet groups), even when the client is registered on a
+ single group (tested on an AP9630, firmware 6.4.0). When DEVICE names an
+ outlet group, the card's load shedding already powers that group off and
+ back on, so skip killpower and log why instead of cutting the other groups.
+ .
+ Bumps the release suffix to "+pcnetgroup3".
+Author: avandeweghe <1706945+avandeweghe@users.noreply.github.com>
+Forwarded: no
+Last-Update: 2026-11-17
+---
+diff --git a/include/version.h b/include/version.h
+index 9bf1f99..613be2f 100644
+--- a/include/version.h
++++ b/include/version.h
+@@ -2,7 +2,7 @@
+ #define VERSION "3.14.14"
+ #define ADATE   "31 May 2016"
+ 
+-#define PCNETGROUP_SUFFIX "+pcnetgroup2"
++#define PCNETGROUP_SUFFIX "+pcnetgroup3"
+ #define APCUPSD_RELEASE VERSION PCNETGROUP_SUFFIX
+ 
+ #ifndef APCUPSD_HOST
+diff --git a/src/drivers/pcnet/pcnet.c b/src/drivers/pcnet/pcnet.c
+index 1ea4d78..ae1a882 100644
+--- a/src/drivers/pcnet/pcnet.c
++++ b/src/drivers/pcnet/pcnet.c
+@@ -881,6 +881,21 @@ bool PcnetUpsDriver::kill_power()
+    md5_state_t ms;
+    md5_byte_t digest[16];
+ 
++   /*
++    * pcnet's killpower always starts a graceful shutdown of the WHOLE UPS
++    * (every outlet group), even when this client is registered on a single
++    * group in the card's PowerChute client list. When we follow an outlet
++    * group, the card's own load shedding already turns that group off and
++    * back on, so never send it: it would cut power to the other groups.
++    */
++   if (_group) {
++      log_event(_ups, LOG_WARNING,
++         "Killpower skipped: following outlet group %d; the management card "
++         "powers that group off and on by itself (pcnet killpower would shut "
++         "down the whole UPS)", _group);
++      return false;
++   }
++
+    /* We cannot perform a killpower without authentication data */
+    if (!_auth) {
+       Error_abort("Cannot perform killpower without authentication "
