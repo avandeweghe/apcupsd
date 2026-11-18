@@ -158,47 +158,143 @@ git archive --prefix=apcupsd-3.14.14/ upstream/3.14.14 | gzip -n > ../apcupsd_3.
 dpkg-buildpackage -b -us -uc
 ```
 
-## Installing with apt
+## Installing from the APT repository
 
-CI publishes a signed APT repository for Debian 13 (trixie, amd64) at
-<https://avandeweghe.github.io/apcupsd/>. Signing key fingerprint:
-`8F6C 14E2 F7D8 2671 607E  F23F E4C8 3274 5D4B 6194` (also in `apcupsd-pcnet.asc`).
+CI publishes a signed APT repository with the patched packages:
 
-On each node, as root:
+| | |
+|---|---|
+| URL | <https://avandeweghe.github.io/apcupsd/> |
+| Suite / component | `trixie` / `main` (Debian 13, also Proxmox VE 9) |
+| Architecture | `amd64` (`apcupsd-doc` is arch-independent) |
+| Packages | `apcupsd`, `apcupsd-doc`, `apcupsd-cgi` |
+| Signing key | `8F6C 14E2 F7D8 2671 607E  F23F E4C8 3274 5D4B 6194` (also in [`apcupsd-pcnet.asc`](apcupsd-pcnet.asc)) |
+
+Every push to `pcnet-outlet-group` rebuilds the packages and republishes the
+repository (`.github/workflows/build-deb.yml`, job `publish`).
+
+### 1. Add the repository (once per node)
+
+As root:
 
 ```sh
+# Signing key
 curl -fsSL https://avandeweghe.github.io/apcupsd/apcupsd-pcnet.gpg \
   -o /usr/share/keyrings/apcupsd-pcnet.gpg
+gpg --show-keys /usr/share/keyrings/apcupsd-pcnet.gpg   # check the fingerprint above
 
+# Source
 echo "deb [signed-by=/usr/share/keyrings/apcupsd-pcnet.gpg] https://avandeweghe.github.io/apcupsd trixie main" \
   > /etc/apt/sources.list.d/apcupsd-pcnet.list
 
+# Pin: always prefer this repo for apcupsd, even over a newer Debian version
 cat > /etc/apt/preferences.d/apcupsd-pcnet <<'EOF'
 Package: apcupsd apcupsd-doc apcupsd-cgi
 Pin: release o=apcupsd-pcnet
 Pin-Priority: 1001
 EOF
+```
 
+Remove any old hold, since the pin replaces it:
+`apt-mark unhold apcupsd apcupsd-doc`.
+
+### 2. Install
+
+```sh
 apt-get update
-apt-get install -o Dpkg::Options::=--force-confold apcupsd
+apt-cache policy apcupsd          # candidate should be ...+pcnetgroupN, priority 1001
+apt-get install -o Dpkg::Options::=--force-confold apcupsd apcupsd-doc
 ```
 
-- The **pin** keeps this build even if Debian publishes a higher version, while
-  still taking updates from this repo with a normal `apt upgrade`. Use it
-  instead of `apt-mark hold` (remove any hold first: `apt-mark unhold apcupsd apcupsd-doc`).
-- `--force-confold` keeps an existing `/etc/apcupsd` configuration.
+`--force-confold` keeps an existing `/etc/apcupsd` configuration. On a fresh
+install there is nothing to keep and Debian's default config is installed.
 
-Then configure the node in `/etc/apcupsd/apcupsd.conf` and restart apcupsd:
+### 3. Configure the node
+
+In `/etc/apcupsd/apcupsd.conf`:
 
 ```
-UPSCABLE ether
-UPSTYPE  pcnet
-DEVICE   <card-ip>:<user>:<auth-phrase>::<outlet-group>
+UPSNAME      NODE1                       # shown in apcaccess / Home Assistant
+UPSCABLE     ether
+UPSTYPE      pcnet
+DEVICE       <card-ip>:<user>:<auth-phrase>::<outlet-group>
+NETSERVER    on                          # NIS on port 3551 for monitoring
+NISIP        0.0.0.0
 ```
 
-and check with `apcaccess` (look for `OUTLGRP`, `OUTLSTAT` and `STATUS : ONLINE`).
-On the card, register the node's IP in the PowerChute client list on the same
-outlet group.
+- `<user>` / `<auth-phrase>` are the card's PowerChute credentials (the phrase
+  is 15–32 characters, case-sensitive).
+- Leave the port empty (`::`) for the default 3052, then the outlet group the
+  node's power cord is plugged into.
+
+Optional, to let the card alone decide when the node shuts down (no local
+timers or battery thresholds):
+
+```
+TIMEOUT      0
+BATTERYLEVEL -1
+MINUTES      -1
+```
+
+The node still shuts down when the card signals its group or the whole UPS,
+or when the UPS reports low battery.
+
+Then:
+
+```sh
+systemctl restart apcupsd
+apcaccess
+```
+
+Expect `DRIVER : PCNET UPS Driver`, `STATUS : ONLINE`, `OUTLGRP : <group>`
+and `OUTLSTAT : ON`. Right after a restart the status can be blank and
+`OUTLSTAT : UNKNOWN` until the card's next broadcast (up to about 30 s).
+
+### 4. On the management card
+
+- Register the node's IP in the PowerChute client list on the **same outlet
+  group**.
+- Allow inbound UDP 3052 from the card if the node runs a firewall.
+- Set the group's load shedding and delays (see
+  [Card settings](#card-settings-that-go-with-this)).
+
+### Updating
+
+```sh
+apt-get update && apt-get upgrade
+```
+
+New builds from this repo install like any other update. Configuration files
+you've changed are kept (dpkg will ask, or use `--force-confold`).
+
+### Checking which build is installed
+
+```sh
+dpkg-query -W apcupsd             # e.g. 3.14.14-5+pcnetgroup3
+apcaccess -p VERSION              # e.g. 3.14.14+pcnetgroup3 (31 May 2016) debian
+journalctl -t apcupsd             # e.g. "Management card started shutdown of outlet group 3"
+```
+
+### Going back to Debian's package
+
+```sh
+rm /etc/apt/preferences.d/apcupsd-pcnet /etc/apt/sources.list.d/apcupsd-pcnet.list
+apt-get update
+apt-get install --allow-downgrades apcupsd=<debian-version> apcupsd-doc=<debian-version>
+```
+
+Take `<debian-version>` from `apt-cache policy apcupsd`. Remove the `:group`
+from `DEVICE` first: stock apcupsd doesn't understand it.
+
+### Troubleshooting
+
+| Symptom | Likely cause |
+|---|---|
+| `STATUS : COMMLOST` | User or auth phrase doesn't match the card, the node isn't receiving UDP 3052 (firewall), or the card has no route to the node |
+| `OUTLSTAT : UNKNOWN` for more than a minute | No packets from the card yet, see above |
+| `OUTLGRP` missing | `DEVICE` has no group, e.g. `ip:user:phrase` instead of `ip:user:phrase::3` |
+| Node didn't shut down when its group was shed | Group number in `DEVICE` doesn't match the outlet it's plugged into, or the node isn't in the card's client list |
+| Node lost power mid-shutdown | The group's Power Off Delay is shorter than the node's real shutdown time |
 
 ## Tested with
 
