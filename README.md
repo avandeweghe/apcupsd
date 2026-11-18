@@ -93,7 +93,13 @@ After apcupsd shuts a machine down, Debian's shutdown hooks run
 **whole UPS**, which turns off every outlet group, not just the one the
 machine is on.
 
-On a UPS shared by several machines, disable it. Edit the `killpower)` case in `/etc/apcupsd/apccontrol` (a conffile, so
+**From `+pcnetgroup3` on, this is handled for you when `DEVICE` names an
+outlet group**: pcnet killpower is skipped and logged ("Killpower skipped:
+following outlet group N ...") instead of shutting down the whole UPS
+(patch 20).
+
+Without a group, on a UPS shared by several machines, disable it yourself.
+Edit the `killpower)` case in `/etc/apcupsd/apccontrol` (a conffile, so
 package upgrades keep your change) to only log, for example:
 
 ```sh
@@ -126,7 +132,13 @@ On the management card, for the outlet group the server is plugged into
   Measure it; a Proxmox host migrating VMs can take much longer than a plain
   shutdown.
 - **Stay off after power returns**: unchecked, so the group comes back on.
+- **Reboot Duration**: the minimum time the group stays off before the Power
+  On Delay starts. Once a group's shutdown has started, the card completes the
+  off/on cycle even if mains returns early, so a halted server always gets a
+  real power cycle. Time back on = Reboot Duration + Power On Delay.
 - Set the server's BIOS to power on when AC is restored.
+- The card does **not** wait for clients to finish shutting down: it cuts the
+  group when the Power Off Delay expires.
 
 ## Building
 
@@ -146,16 +158,47 @@ git archive --prefix=apcupsd-3.14.14/ upstream/3.14.14 | gzip -n > ../apcupsd_3.
 dpkg-buildpackage -b -us -uc
 ```
 
-## Installing
+## Installing with apt
+
+CI publishes a signed APT repository for Debian 13 (trixie, amd64) at
+<https://avandeweghe.github.io/apcupsd/>. Signing key fingerprint:
+`8F6C 14E2 F7D8 2671 607E  F23F E4C8 3274 5D4B 6194` (also in `apcupsd-pcnet.asc`).
+
+On each node, as root:
 
 ```sh
-sudo apt-get install -o Dpkg::Options::=--force-confold \
-  ./apcupsd_3.14.14-5+pcnetgroup2_amd64.deb ./apcupsd-doc_3.14.14-5+pcnetgroup2_all.deb
-sudo apt-mark hold apcupsd apcupsd-doc
+curl -fsSL https://avandeweghe.github.io/apcupsd/apcupsd-pcnet.gpg \
+  -o /usr/share/keyrings/apcupsd-pcnet.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/apcupsd-pcnet.gpg] https://avandeweghe.github.io/apcupsd trixie main" \
+  > /etc/apt/sources.list.d/apcupsd-pcnet.list
+
+cat > /etc/apt/preferences.d/apcupsd-pcnet <<'EOF'
+Package: apcupsd apcupsd-doc apcupsd-cgi
+Pin: release o=apcupsd-pcnet
+Pin-Priority: 1001
+EOF
+
+apt-get update
+apt-get install -o Dpkg::Options::=--force-confold apcupsd
 ```
 
-`--force-confold` keeps your existing `/etc/apcupsd` files. The hold stops a
-Debian update from replacing the patched build.
+- The **pin** keeps this build even if Debian publishes a higher version, while
+  still taking updates from this repo with a normal `apt upgrade`. Use it
+  instead of `apt-mark hold` (remove any hold first: `apt-mark unhold apcupsd apcupsd-doc`).
+- `--force-confold` keeps an existing `/etc/apcupsd` configuration.
+
+Then configure the node in `/etc/apcupsd/apcupsd.conf` and restart apcupsd:
+
+```
+UPSCABLE ether
+UPSTYPE  pcnet
+DEVICE   <card-ip>:<user>:<auth-phrase>::<outlet-group>
+```
+
+and check with `apcaccess` (look for `OUTLGRP`, `OUTLSTAT` and `STATUS : ONLINE`).
+On the card, register the node's IP in the PowerChute client list on the same
+outlet group.
 
 ## Tested with
 
@@ -163,7 +206,8 @@ Debian update from replacing the patched build.
   status protocol `MV=v1.7.0`.
 - Debian 13 / Proxmox VE 9 host following outlet group 3: the card's group-3
   load shed produced `SD3=1`, and the host shut down cleanly before the group
-  was switched off.
+  was switched off. With mains restored mid-sequence, the card still completed
+  the group's off/on cycle and the host booted on its own.
 
 ## Patches
 
@@ -172,5 +216,6 @@ Debian update from replacing the patched build.
 | `17-pcnet-outlet-group-shutdown.patch` | Optional `:group` in `DEVICE`; act on `SDn` |
 | `18-manual-utf8.patch` | Convert a manual file to UTF-8 so docs build |
 | `19-apcaccess-outlet-group.patch` | `OUTLGRP` / `OUTLNAME` / `OUTLSTAT`; `+pcnetgroupN` version marker |
+| `20-pcnet-group-skip-killpower.patch` | In group mode, skip pcnet killpower (it would shut down the whole UPS) |
 
 These patches have not been sent upstream.
